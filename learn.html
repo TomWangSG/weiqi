@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>围棋入门 Learn Go</title>
+<meta name="description" content="Learn Go (Weiqi) in 12 short interactive lessons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Ma+Shan+Zheng&display=swap">
+<style>
+/* Layout: lesson strip on top, kaya board on the left, the lesson card on the right; stacks on phones. Same ink-and-slate palette as the game. */
+:root {
+  --bg: #E7EAEE;
+  --surface: #F6F7F9;
+  --fg: #1A1F27;
+  --muted: #5A6372;
+  --line: #CBD1DA;
+  --accent: #2C4A7A;
+  --accent-soft: rgba(44,74,122,.12);
+  --ok: #2E7D4F;
+  --ok-soft: rgba(46,125,79,.12);
+  --warn: #B3261E;
+  --warn-soft: rgba(179,38,30,.10);
+  --font-display: "Ma Shan Zheng", "STXingkai", "KaiTi", serif;
+  --font-ui: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1217; --surface: #161B22; --fg: #E3E7EE; --muted: #96A0B0; --line: #29313C;
+    --accent: #8FB0E6; --accent-soft: rgba(143,176,230,.14);
+    --ok: #6CC596; --ok-soft: rgba(108,197,150,.14); --warn: #F08A80; --warn-soft: rgba(240,138,128,.12);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1217; --surface: #161B22; --fg: #E3E7EE; --muted: #96A0B0; --line: #29313C;
+  --accent: #8FB0E6; --accent-soft: rgba(143,176,230,.14);
+  --ok: #6CC596; --ok-soft: rgba(108,197,150,.14); --warn: #F08A80; --warn-soft: rgba(240,138,128,.12);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.wrap { max-width: 1020px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: 42px; line-height: 1; margin: 0; letter-spacing: .06em; }
+.sub { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+header a { margin-left: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
+header a:hover { text-decoration: underline; }
+.strip { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 17px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip.done { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.chip[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.app { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 420px); gap: 28px; justify-content: center; align-items: start; }
+@media (max-width: 900px) { .app { grid-template-columns: minmax(0, 520px); } }
+.board-wrap { min-width: 0; }
+canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 1 / 1; border-radius: 4px; touch-action: manipulation; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 20px 44px -20px rgba(40,26,6,.6); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.kicker { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.card h2 { margin: 0; font-size: 22px; text-wrap: balance; }
+.card h2 .zh { font-family: var(--font-display); font-weight: 400; font-size: 28px; margin-right: 8px; }
+.lesson-text p { margin: 0 0 8px; }
+.lesson-text p:last-child { margin: 0; }
+.lesson-text .en { color: var(--muted); font-size: 13px; }
+.task { border: 1px dashed var(--accent); border-radius: 10px; padding: 10px 12px; background: var(--accent-soft); display: flex; gap: 10px; align-items: flex-start; }
+.task .you { flex: none; width: 18px; height: 18px; border-radius: 50%; margin-top: 2px; }
+.you.b { background: radial-gradient(circle at 35% 30%, #5a5d63, #16181C 70%); }
+.you.w { background: radial-gradient(circle at 35% 30%, #fff, #d8d8d2 80%); box-shadow: 0 0 0 1px #9AA1AC; }
+.you.none { display: none; }
+.feedback { border-radius: 10px; padding: 10px 12px; min-height: 0; }
+.feedback:empty { display: none; }
+.feedback.ok { background: var(--ok-soft); color: var(--fg); border: 1px solid var(--ok); }
+.feedback.warn { background: var(--warn-soft); color: var(--fg); border: 1px solid var(--warn); }
+.feedback b { color: inherit; }
+.nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { flex: 1; min-width: 96px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-weight: 500; padding: 9px 12px; border-radius: 8px; cursor: pointer; text-align: center; text-decoration: none; }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pulse { animation: pulse 1.2s ease-in-out 2; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px var(--accent-soft); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>围棋入门</h1>
+    <span class="sub">Learn Go · 12 short lessons</span>
+    <a href="./">← 返回对局 Play</a>
+  </header>
+  <nav class="strip" id="strip" aria-label="Lessons"></nav>
+  <div class="app">
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="board" tabindex="0" aria-label="Lesson board. Click an intersection."></canvas>
+    </div>
+    <section class="card">
+      <span class="kicker" id="kicker">第 1 课 / 共 12 课</span>
+      <h2 id="title"></h2>
+      <div class="lesson-text" id="text"></div>
+      <div class="task" id="taskBox"><span class="you b" id="youStone"></span><div id="task"></div></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="nav">
+        <button type="button" class="btn" id="prevBtn">← 上一课 Back</button>
+        <button type="button" class="btn" id="resetBtn">重来 Reset</button>
+        <button type="button" class="btn primary" id="nextBtn">下一课 Next →</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const LETTERS = 'ABCDEFGHJKLMNOPQRST';
+
+/* Each lesson: a starting position and one or more interactive steps.
+   Step types: goal (play one of the answers), find (click every answer point),
+   illegal (try a forbidden point), info (read only). */
+const LESSONS = [
+  {
+    zh: '落子', en: 'Placing stones', size: 7, b: [], w: [],
+    text: '<p>围棋下在<b>线的交叉点</b>上，不是格子里。黑棋先下，双方轮流，每次一子。棋子落下后不再移动。</p><p class="en">Stones go on the intersections, not in the squares. Black plays first, then players take turns. Stones never move once placed.</p><p class="en">正式棋盘是 19 路，初学者从 7 路、9 路开始。The full board has 19 lines; beginners start small.</p>',
+    steps: [{ type: 'goal', player: 1, answers: ['D4'], marks: ['D4'],
+      task: '在中央的三角形处（D4）放一颗黑子。<br><span class="en">Place a black stone on the triangle (D4).</span>',
+      hint: '找棋盘正中的三角形标记。Look for the triangle in the center.',
+      success: '很好！这就是落子。Well done: that is a move.' }]
+  },
+  {
+    zh: '气', en: 'Liberties', size: 7, b: ['D4'], w: [],
+    text: '<p>紧挨着棋子的<b>空交叉点</b>（上下左右，不算斜线）叫作这颗棋子的<b>气</b>。</p><p class="en">The empty points directly next to a stone, up, down, left and right, are its liberties. Diagonals do not count.</p>',
+    steps: [{ type: 'find', player: 0, answers: ['D5', 'D3', 'C4', 'E4'],
+      task: '点出黑子所有的气。<br><span class="en">Click every liberty of the black stone.</span>',
+      hint: '只看上下左右四个方向。Only up, down, left and right.',
+      success: '中间的一颗子有 <b>4 口气</b>。在边上只有 3 口，在角上只有 2 口。<br>A stone in the middle has 4 liberties; on the edge 3, in the corner 2.' }]
+  },
+  {
+    zh: '相连', en: 'Connected stones', size: 7, b: ['D4', 'E4'], w: [],
+    text: '<p>上下左右相邻的同色棋子<b>连成一块</b>，共用所有的气。斜着放的棋子不算相连。</p><p class="en">Stones of one color that touch along a line form one group and share their liberties. Diagonal neighbours are not connected.</p>',
+    steps: [{ type: 'find', player: 0, answers: ['D5', 'E5', 'D3', 'E3', 'C4', 'F4'],
+      task: '点出这两颗黑子（一块棋）的全部气。<br><span class="en">Click every liberty of this two-stone group.</span>',
+      hint: '一共有 6 口气。There are 6 in total.',
+      success: '连在一起后有 <b>6 口气</b>，比单独一颗更难被吃掉。<br>Connected, they have 6 liberties and are harder to capture.' }]
+  },
+  {
+    zh: '提子', en: 'Capturing', size: 7, b: ['D5', 'C4', 'E4'], w: ['D4'],
+    text: '<p>当一颗棋子<b>所有的气都被堵住</b>，它就被吃掉，从棋盘上拿走，这叫<b>提子</b>。只剩一口气的状态叫<b>打吃</b>。</p><p class="en">When a stone has no liberties left, it is captured and removed. A stone with only one liberty left is in atari.</p>',
+    steps: [{ type: 'goal', player: 1, answers: ['D3'],
+      task: '白子只剩一口气了。下一手把它吃掉！<br><span class="en">The white stone has one liberty left. Capture it.</span>',
+      hint: '白子下方还空着。The point below the white stone is still open.',
+      success: '提子成功！白子被拿走了。Captured: the white stone is removed.' }]
+  },
+  {
+    zh: '吃一块', en: 'Capturing a group', size: 7, b: ['D5', 'E5', 'C4', 'F4', 'D3'], w: ['D4', 'E4'],
+    text: '<p>一整块棋也一样：把这块棋<b>所有的气都堵住</b>，整块一起被提掉。</p><p class="en">A whole group is captured the same way: fill its last liberty and every stone in it is removed.</p>',
+    steps: [{ type: 'goal', player: 1, answers: ['E3'],
+      task: '这两颗白子只剩一口气。把它们一起吃掉！<br><span class="en">These two white stones share one last liberty. Capture both.</span>',
+      hint: '看看两颗白子周围哪个点还空着。Find the one empty point next to them.',
+      success: '一次提掉 2 子！Two stones captured in one move.' }]
+  },
+  {
+    zh: '逃跑', en: 'Escaping atari', size: 7, b: ['D4'], w: ['D5', 'C4', 'E4'],
+    text: '<p>如果自己的棋被<b>打吃</b>（只剩一口气），可以在那口气上<b>长出去</b>，让气变多。</p><p class="en">If your stone is in atari, extend into its last liberty to gain more liberties.</p>',
+    steps: [{ type: 'goal', player: 1, answers: ['D3'],
+      task: '你的黑子被打吃了！救活它。<br><span class="en">Your black stone is in atari. Save it.</span>',
+      hint: '在它唯一的气上落子。Play on its only liberty.',
+      success: '逃出来了！现在这块黑棋有 <b>3 口气</b>。Escaped: the group now has 3 liberties.' }]
+  },
+  {
+    zh: '禁着点', en: 'No suicide', size: 7, b: [], w: ['D5', 'C4', 'E4', 'D3'],
+    text: '<p>不能把棋子下在<b>没有气</b>的地方（下进去自己就没气了），这样的点叫<b>禁着点</b>。</p><p class="en">You may not play where your stone would have no liberties. Such a point is forbidden.</p>',
+    steps: [{ type: 'illegal', player: 1, answers: ['D4'], marks: ['D4'],
+      task: '试着把黑子下在三角形处（D4），看看会发生什么。<br><span class="en">Try to play black on the triangle (D4).</span>',
+      hint: '请点三角形那个点。Click the triangle.',
+      success: '不能下！D4 四周都是白子，黑子下进去一口气都没有，而且也吃不掉任何白子。<br>Not allowed: a stone there would have no liberties and captures nothing.' }]
+  },
+  {
+    zh: '能提就能下', en: 'Unless it captures', size: 7,
+    b: ['D6', 'C5', 'E5', 'B4', 'F4', 'C3', 'E3', 'D2'], w: ['D5', 'C4', 'E4', 'D3'],
+    text: '<p>例外：如果下进去<b>能提掉对方的棋</b>，提子之后就有气了，所以可以下。</p><p class="en">Exception: if the move captures, the captured stones leave liberties behind, so it is allowed.</p>',
+    steps: [{ type: 'goal', player: 1, answers: ['D4'], marks: ['D4'],
+      task: '四颗白子都只剩 D4 一口气。下在 D4，一次吃掉 4 子！<br><span class="en">All four white stones have D4 as their last liberty. Play there.</span>',
+      hint: '点中间的三角形。Click the triangle in the middle.',
+      success: '一手提 4 子！先提子，所以这一手是合法的。Four stones captured, so the move is legal.' }]
+  },
+  {
+    zh: '打劫', en: 'Ko', size: 7, b: ['D5', 'C4', 'D3'], w: ['D4', 'E5', 'F4', 'E3'],
+    text: '<p>有一种形状双方可以<b>来回互提一子</b>，这叫<b>劫</b>。为了避免无限循环：被提后<b>不能马上提回</b>，必须先在别处下一手。</p><p class="en">In a ko, each side could keep retaking one stone forever. So after your stone is taken, you must play elsewhere once before retaking.</p>',
+    steps: [
+      { type: 'goal', player: 1, answers: ['E4'],
+        task: '第一步：用黑棋提掉 D4 的白子。<br><span class="en">Step 1: capture the white stone on D4.</span>',
+        hint: '白子 D4 只剩右边一口气。Its last liberty is on the right.',
+        success: '提掉了！现在轮到白棋。Captured. Now it is White’s turn.' },
+      { type: 'illegal', player: 2, answers: ['D4'], marks: ['D4'],
+        task: '第二步：换你执白，试着马上在 D4 提回黑子。<br><span class="en">Step 2: as White, try to retake right away on D4.</span>',
+        hint: '点 D4（方框处）。Click D4.',
+        success: '不行！这就是<b>打劫</b>规则：白棋要先在别处下一手（找“劫材”），下一回合才能提回。<br>This is the ko rule: White must play elsewhere first.' }
+    ]
+  },
+  {
+    zh: '两眼活棋', en: 'Two eyes live', size: 7,
+    b: ['A3', 'B3', 'C3', 'D3', 'B2', 'D2', 'A1', 'B1', 'C1', 'D1'], w: ['A4', 'B4', 'C4', 'D4', 'E4', 'E3', 'E2', 'E1'],
+    text: '<p>一块棋里面被围住的空点叫<b>眼</b>。有<b>两个眼</b>的棋永远吃不掉，这叫<b>活棋</b>。</p><p class="en">An empty point surrounded by one group is an eye. A group with two separate eyes can never be captured: it is alive.</p>',
+    steps: [{ type: 'illegal', player: 2, answers: ['A2', 'C2'], marks: ['A2', 'C2'],
+      task: '你执白。试着下进黑棋的眼里（A2 或 C2）吃掉黑棋。<br><span class="en">You are White. Try to play inside one of Black’s eyes.</span>',
+      hint: '点三角形之一。Click one of the triangles.',
+      success: '下不进去！下一个眼，白子没有气，而黑棋还有另一个眼，所以是禁着点。<b>两眼 = 活棋</b>。<br>Two eyes means alive: either point is suicide for White.' }]
+  },
+  {
+    zh: '一眼死', en: 'One eye dies', size: 7,
+    b: ['A3', 'B3', 'C3', 'D3', 'B2', 'C2', 'D2', 'A1', 'B1', 'C1', 'D1'], w: ['A4', 'B4', 'C4', 'D4', 'E4', 'E3', 'E2', 'E1'],
+    text: '<p>如果只有<b>一个眼</b>，对方最后下进这个眼，就能把整块棋提掉。</p><p class="en">With only one eye, the opponent eventually plays inside it and captures the whole group.</p>',
+    steps: [{ type: 'goal', player: 2, answers: ['A2'],
+      task: '你执白。黑棋只有一个眼，吃掉整块黑棋！<br><span class="en">You are White. Black has only one eye. Capture the whole group.</span>',
+      hint: '下进黑棋唯一的眼。Play inside the eye.',
+      success: '一手提掉 11 子！<b>一眼 = 死棋</b>。所以做活要做出两个眼。<br>One eye is dead. Make two eyes to live.' }]
+  },
+  {
+    zh: '数子胜负', en: 'Counting', size: 7,
+    b: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'], w: ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7'],
+    terr: { b: 'ABC', w: 'FG' },
+    text: '<p>双方都<b>停一手</b>（Pass）就终局。中国规则<b>数子</b>：棋盘上自己的<b>活子 + 围住的空点</b>。</p><p>黑：7 子 + 21 空 = <b>28</b>；白：7 子 + 14 空 = <b>21</b>。黑多 7 子。</p><p>但黑棋先下有优势，所以白棋有<b>贴目 7.5</b>：21 + 7.5 = 28.5，<b>白胜 0.5</b>！</p><p class="en">Both pass to end the game. Score = your stones + the empty points you surround. Black 28, White 21, but White gets 7.5 komi for moving second, so White wins by 0.5.</p>',
+    steps: [{ type: 'info',
+      task: '小方块表示各自的地盘。学完了！去下一盘 9 路吧。<br><span class="en">The small squares show each side’s territory. You are ready for a 9×9 game.</span>',
+      success: '' }]
+  }
+];
+
+/* ---------- tiny rules engine ---------- */
+function nbrs(i, N) {
+  const r = (i / N) | 0, c = i % N, out = [];
+  if (r > 0) out.push(i - N); if (r < N - 1) out.push(i + N);
+  if (c > 0) out.push(i - 1); if (c < N - 1) out.push(i + 1);
+  return out;
+}
+function group(g, i, N) {
+  const col = g[i], stones = [i], libs = new Set(), seen = new Set([i]);
+  for (let k = 0; k < stones.length; k++) for (const q of nbrs(stones[k], N)) {
+    if (g[q] === 0) libs.add(q);
+    else if (g[q] === col && !seen.has(q)) { seen.add(q); stones.push(q); }
+  }
+  return { stones, libs };
+}
+function tryPlay(st, i, c) {
+  const N = st.N;
+  if (st.g[i]) return { ok: false, reason: 'occupied' };
+  if (i === st.ko) return { ok: false, reason: 'ko' };
+  const g = st.g.slice(); g[i] = c;
+  const captured = [];
+  for (const q of nbrs(i, N)) if (g[q] === 3 - c) {
+    const gr = group(g, q, N);
+    if (gr.libs.size === 0) for (const s of gr.stones) { g[s] = 0; captured.push(s); }
+  }
+  const own = group(g, i, N);
+  if (own.libs.size === 0) return { ok: false, reason: 'suicide' };
+  const ko = captured.length === 1 && own.stones.length === 1 && own.libs.size === 1 ? captured[0] : -1;
+  return { ok: true, g, ko, captured };
+}
+
+/* ---------- state ---------- */
+let li = 0, si = 0, st = null, found = new Set(), stepDone = false, lastMove = -1, flash = null, flashTimer = 0;
+let done = new Set();
+try { (JSON.parse(localStorage.getItem('wq-learn-done') || '[]')).forEach(x => done.add(x)); } catch (e) {}
+const saveDone = () => { try { localStorage.setItem('wq-learn-done', JSON.stringify([...done])); } catch (e) {} };
+
+const L = () => LESSONS[li];
+const S = () => L().steps[si];
+const pt = (s, N) => { const c = LETTERS.indexOf(s[0]); const n = parseInt(s.slice(1), 10); return (N - n) * N + c; };
+const name = (i, N) => LETTERS[i % N] + (N - ((i / N) | 0));
+
+function loadLesson(i) {
+  li = i; si = 0;
+  const l = L(), N = l.size;
+  st = { N, g: new Int8Array(N * N), ko: -1 };
+  for (const s of l.b) st.g[pt(s, N)] = 1;
+  for (const s of l.w) st.g[pt(s, N)] = 2;
+  found = new Set(); stepDone = false; lastMove = -1; flash = null;
+  setFeedback('', '');
+  layout(); render(); draw();
+  try { history.replaceState(null, '', '#lesson-' + (li + 1)); } catch (e) {}
+}
+
+function completeStep() {
+  const step = S();
+  setFeedback('ok', step.success || '');
+  if (si < L().steps.length - 1) {
+    setTimeout(() => { si++; found = new Set(); stepDone = false; render(); draw(); }, 1400);
+    stepDone = true;
+  } else {
+    stepDone = true;
+    done.add(li); saveDone();
+    if (li === LESSONS.length - 1) {
+      $('feedback').innerHTML += (step.success ? '<br>' : '') + '<a class="btn primary" id="playNow" href="./" style="display:inline-block;margin-top:8px">开始 9 路对局 · 初级 Play 9×9 (Easy) →</a>';
+      const a = document.getElementById('playNow');
+      if (a) a.addEventListener('click', () => {
+        try {
+          const s = JSON.parse(localStorage.getItem('wq-settings') || '{}');
+          localStorage.setItem('wq-settings', JSON.stringify(Object.assign(s, { size: 9, mode: 'ai', human: 1, level: 0 })));
+        } catch (e) {}
+      });
+    }
+    $('nextBtn').classList.add('pulse');
+  }
+  render(); draw();
+}
+
+function handle(i) {
+  const step = S();
+  if (stepDone || !step || step.type === 'info') return;
+  const N = st.N, nm = name(i, N), isAns = step.answers.includes(nm);
+  if (step.type === 'find') {
+    if (isAns) {
+      if (found.has(nm)) return;
+      found.add(nm);
+      if (found.size === step.answers.length) completeStep();
+      else { setFeedback('ok', `找到 ${found.size} / ${step.answers.length}`); draw(); }
+    } else if (st.g[i]) setFeedback('warn', '这里有棋子，气必须是空点。Liberties are empty points.');
+    else setFeedback('warn', '这不是它的气。' + step.hint);
+    return;
+  }
+  const res = tryPlay(st, i, step.player);
+  if (step.type === 'illegal') {
+    if (isAns && !res.ok) { flash = { i, c: step.player }; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash = null; draw(); }, 900); completeStep(); }
+    else setFeedback('warn', step.hint);
+    return;
+  }
+  // goal
+  if (!res.ok) {
+    if (res.reason === 'occupied') return;
+    setFeedback('warn', res.reason === 'ko' ? '打劫：不能马上提回。Ko: not yet.' : '这里是禁着点（没有气）。That point has no liberties.');
+    return;
+  }
+  if (isAns) {
+    st.g = res.g; st.ko = res.ko; lastMove = i;
+    completeStep();
+  } else {
+    const prev = st.g;
+    st.g = res.g; lastMove = i; draw();
+    setFeedback('warn', '不对哦，再试试。Not quite, try again. ' + step.hint);
+    setTimeout(() => { st.g = prev; lastMove = -1; draw(); }, 900);
+  }
+}
+
+/* ---------- drawing ---------- */
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let CW = 0, cell = 0, pad = 0, dpr = 1;
+function layout() {
+  const w = canvas.getBoundingClientRect().width;
+  if (!w || !st) return;
+  dpr = window.devicePixelRatio || 1;
+  CW = w; cell = w / (st.N + 1); pad = cell;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(w * dpr);
+}
+const xy = i => [pad + (i % st.N) * cell, pad + ((i / st.N) | 0) * cell];
+
+function stone(x, y, c, alpha) {
+  const R = cell * 0.46;
+  ctx.save();
+  if (alpha != null) ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(40,24,4,.32)';
+  ctx.beginPath(); ctx.arc(x + R * 0.08, y + R * 0.12, R, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createRadialGradient(x - R * 0.35, y - R * 0.4, R * 0.08, x, y, R);
+  if (c === 1) { g.addColorStop(0, '#6A6E75'); g.addColorStop(0.45, '#26282D'); g.addColorStop(1, '#0C0D10'); }
+  else { g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.6, '#EEEDE8'); g.addColorStop(1, '#C9C8C1'); }
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+  if (c === 2) { ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 0.8; ctx.stroke(); }
+  ctx.restore();
+}
+
+function draw() {
+  if (!CW || !st) return;
+  const N = st.N;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, CW, CW);
+  g.addColorStop(0, '#E5C27A'); g.addColorStop(0.55, '#DCB463'); g.addColorStop(1, '#CFA454');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CW);
+  const end = pad + (N - 1) * cell;
+  ctx.strokeStyle = '#3A2810'; ctx.lineWidth = Math.max(1, cell * 0.03);
+  ctx.beginPath();
+  for (let k = 0; k < N; k++) { const v = pad + k * cell; ctx.moveTo(pad, v); ctx.lineTo(end, v); ctx.moveTo(v, pad); ctx.lineTo(v, end); }
+  ctx.stroke();
+  ctx.lineWidth = Math.max(1.6, cell * 0.05); ctx.strokeRect(pad, pad, end - pad, end - pad);
+  if (N === 7) { ctx.fillStyle = '#3A2810'; for (const [r, c] of [[3, 3], [1, 1], [1, 5], [5, 1], [5, 5]]) { ctx.beginPath(); ctx.arc(pad + c * cell, pad + r * cell, cell * 0.07, 0, Math.PI * 2); ctx.fill(); } }
+  ctx.fillStyle = 'rgba(58,40,16,.8)';
+  ctx.font = `600 ${Math.max(10, cell * 0.26)}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let k = 0; k < N; k++) {
+    const v = pad + k * cell;
+    ctx.fillText(LETTERS[k], v, pad * 0.4); ctx.fillText(LETTERS[k], v, CW - pad * 0.4);
+    ctx.fillText(String(N - k), pad * 0.4, v); ctx.fillText(String(N - k), CW - pad * 0.4, v);
+  }
+
+  const l = L();
+  if (l.terr) {
+    const s = cell * 0.3;
+    for (let i = 0; i < N * N; i++) {
+      if (st.g[i]) continue;
+      const col = LETTERS[i % N];
+      const t = l.terr.b.includes(col) ? 1 : l.terr.w.includes(col) ? 2 : 0;
+      if (!t) continue;
+      const [x, y] = xy(i);
+      ctx.fillStyle = t === 1 ? '#121418' : '#F7F7F3';
+      ctx.strokeStyle = t === 1 ? 'rgba(255,255,255,.3)' : 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
+      ctx.fillRect(x - s / 2, y - s / 2, s, s); ctx.strokeRect(x - s / 2, y - s / 2, s, s);
+    }
+  }
+
+  for (let i = 0; i < N * N; i++) if (st.g[i]) { const [x, y] = xy(i); stone(x, y, st.g[i]); }
+  if (flash) { const [x, y] = xy(flash.i); stone(x, y, flash.c, 0.4);
+    ctx.strokeStyle = '#C62828'; ctx.lineWidth = Math.max(2, cell * 0.08); const d = cell * 0.22;
+    ctx.beginPath(); ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d); ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d); ctx.stroke(); }
+
+  const step = S();
+  if (step && step.marks && !stepDone) {
+    for (const m of step.marks) {
+      const i = pt(m, N); if (st.g[i]) continue;
+      const [x, y] = xy(i), r = cell * 0.24;
+      ctx.strokeStyle = '#2C4A7A'; ctx.lineWidth = Math.max(2, cell * 0.06);
+      ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.9, y + r * 0.6); ctx.lineTo(x - r * 0.9, y + r * 0.6); ctx.closePath(); ctx.stroke();
+    }
+  }
+  for (const f of found) {
+    const [x, y] = xy(pt(f, N));
+    ctx.fillStyle = 'rgba(46,125,79,.9)';
+    ctx.beginPath(); ctx.arc(x, y, cell * 0.16, 0, Math.PI * 2); ctx.fill();
+  }
+  if (st.ko >= 0 && !st.g[st.ko]) {
+    const [x, y] = xy(st.ko), s = cell * 0.34;
+    ctx.strokeStyle = '#8A1C14'; ctx.lineWidth = Math.max(1.5, cell * 0.05); ctx.strokeRect(x - s / 2, y - s / 2, s, s);
+  }
+  if (lastMove >= 0 && st.g[lastMove]) {
+    const [x, y] = xy(lastMove);
+    ctx.strokeStyle = st.g[lastMove] === 1 ? '#F2F2EE' : '#16181C'; ctx.lineWidth = Math.max(1.5, cell * 0.06);
+    ctx.beginPath(); ctx.arc(x, y, cell * 0.18, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+function setFeedback(kind, html) { const f = $('feedback'); f.className = 'feedback ' + kind; f.innerHTML = html; }
+
+function render() {
+  const l = L(), step = S();
+  $('kicker').textContent = `第 ${li + 1} 课 / 共 ${LESSONS.length} 课 · Lesson ${li + 1} of ${LESSONS.length}`;
+  $('title').innerHTML = `<span class="zh">${l.zh}</span>${l.en}`;
+  $('text').innerHTML = l.text;
+  const multi = l.steps.length > 1 ? `<b>(${si + 1}/${l.steps.length})</b> ` : '';
+  $('task').innerHTML = multi + step.task;
+  $('youStone').className = 'you ' + (step.player === 1 ? 'b' : step.player === 2 ? 'w' : 'none');
+  if (step.type === 'info' && !stepDone) { done.add(li); saveDone(); }
+  $('prevBtn').disabled = li === 0;
+  $('nextBtn').disabled = li === LESSONS.length - 1;
+  if (!stepDone) $('nextBtn').classList.remove('pulse');
+  const strip = $('strip');
+  strip.innerHTML = '';
+  LESSONS.forEach((x, k) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip' + (done.has(k) ? ' done' : '');
+    b.textContent = k + 1; b.title = `${x.zh} ${x.en}`;
+    if (k === li) b.setAttribute('aria-current', 'step');
+    b.addEventListener('click', () => loadLesson(k));
+    strip.appendChild(b);
+  });
+  if (step.type === 'info' && li === LESSONS.length - 1 && !stepDone) { stepDone = true; completeStep(); }
+}
+
+canvas.addEventListener('pointerdown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const c = Math.round((x - pad) / cell), r = Math.round((y - pad) / cell);
+  if (c < 0 || r < 0 || c >= st.N || r >= st.N) return;
+  if (Math.hypot(x - (pad + c * cell), y - (pad + r * cell)) > cell * 0.5) return;
+  handle(r * st.N + c);
+});
+$('prevBtn').addEventListener('click', () => { if (li > 0) loadLesson(li - 1); });
+$('nextBtn').addEventListener('click', () => { if (li < LESSONS.length - 1) loadLesson(li + 1); });
+$('resetBtn').addEventListener('click', () => loadLesson(li));
+new ResizeObserver(() => { layout(); draw(); }).observe($('boardWrap'));
+if (document.fonts && document.fonts.load) document.fonts.load('40px "Ma Shan Zheng"', '围棋入门落子气相连提吃一块逃跑禁着点能就下打劫两眼活棋死数胜负').then(() => draw()).catch(() => {});
+
+const m = /^#lesson-(\d+)$/.exec(location.hash || '');
+loadLesson(m ? Math.min(LESSONS.length, Math.max(1, +m[1])) - 1 : 0);
+</script>
+
+</body>
+</html>
